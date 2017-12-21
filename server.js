@@ -10,7 +10,16 @@ import rand_id from './lib/rand_id';
 
 const debug = Debug('localtunnel:server');
 
-function GetClientIdFromHostname(hostname) {
+function GetClientIdFromHostname(hostname, domain) {
+    if ((typeof domain === 'string' || domain instanceof String) && domain.length > 0) {
+        const hostn = hostname.replace(/:\d+$/, ''); // Strip port number (e.g. ':3000') from hostname
+        if (hostn === domain) {
+            return false;
+        }
+        if (hostn.endsWith('.' + domain)) {
+            return hostn.slice(0, hostn.length - domain.length - 1);
+        }
+    }
     return tldjs.getSubdomain(hostname);
 }
 
@@ -20,6 +29,8 @@ module.exports = function(opt) {
     const manager = new ClientManager(opt);
 
     const schema = opt.secure ? 'https' : 'http';
+
+    const domain = opt.domain ? opt.domain : false;
 
     const app = new Koa();
 
@@ -111,7 +122,7 @@ module.exports = function(opt) {
             return;
         }
 
-        const clientId = GetClientIdFromHostname(hostname);
+        const clientId = GetClientIdFromHostname(hostname, domain);
         if (!clientId) {
             appCallback(req, res);
             return;
@@ -133,7 +144,7 @@ module.exports = function(opt) {
             return;
         }
 
-        const clientId = GetClientIdFromHostname(hostname);
+        const clientId = GetClientIdFromHostname(hostname, domain);
         if (!clientId) {
             sock.destroy();
             return;
